@@ -56,15 +56,11 @@ async function getTemps(lat, lon) {
 -------------------------show weather--------------------------
 ----------------------------------------------------------------------- */
 
-async function showWeather(location, dailyTemps, aiSuggestion) {
-  //get icon
-  const icon = location.weather[0].icon;
+function weatherSecFunc(location, icon) {
   const image = `https://openweathermap.org/payload/api/media/file/${icon}.png`;
 
-  //HTML
-
-  weatherSec.innerHTML = `
-    <div class="weather-card">
+  return `
+      <div class="weather-card">
       <div class="weather-first-col">
         <h2 class="temp">${Math.round(location.main.temp)}&deg;</h2>
         <img src="${image}" class="weather-icon">
@@ -76,9 +72,11 @@ async function showWeather(location, dailyTemps, aiSuggestion) {
       </div>
     </div>
   `;
+}
 
-  infoSec.innerHTML = `
-    <div class="info-card">
+function infoSecFunc(location, aiSuggestion) {
+  //aiSuggestion
+  return `<div class="info-card">
       <div class="info-first-col">
         <img src="icons/feels-like.png" class="icon">
           <p class="temp-feels">Feels Like: ${Math.round(location.main.feels_like)}</p>
@@ -91,82 +89,80 @@ async function showWeather(location, dailyTemps, aiSuggestion) {
         <p class="wind">Clothing Suggestions:</p>
         <p>${aiSuggestion}</p>
       </div>
-    </div>
-  `;
+    </div>`;
+}
 
-  dailyTemp.innerHTML = `
-  <div class="temp-cards">
-    <div class=temp-first-col>
-      <div class="card-0">
-        <p>${new Date(
-          dailyTemps.forecast.forecastday[0].date,
-        ).toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-        })}
-        </p>
-        <img src=${dailyTemps.forecast.forecastday[0].day.condition.icon} class=temp-icon>
-        <p><strong>${dailyTemps.forecast.forecastday[0].day.avgtemp_c}&deg;</strong></p>
+function dailyTempFunc(dailyTemps) {
+  const cards = dailyTemps.forecast.forecastday
+    .slice(0, 3)
+    .map(
+      (day) => `
+        <div class="card">
+          <p>
+            ${new Date(day.date).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+          <img
+            src="${day.day.condition.icon}"
+            class="temp-icon"
+            alt="${day.day.condition.text}"
+          >
+          <p><strong>${day.day.avgtemp_c}&deg;</strong></p>
+        </div>
+      `,
+    )
+    .join("");
+
+  return `
+    <div class="temp-cards">
+      <div class="temp-first-col">
+        ${cards}
       </div>
-      <div class="card-1">
-        <p>${new Date(
-          dailyTemps.forecast.forecastday[1].date,
-        ).toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-        })}
-        </p>
-        <img src=${dailyTemps.forecast.forecastday[1].day.condition.icon} class=temp-icon>
-        <p><strong>${dailyTemps.forecast.forecastday[1].day.avgtemp_c}&deg;</strong></p>
-      </div>
-      <div class="card-2">
-        <p>${new Date(
-          dailyTemps.forecast.forecastday[2].date,
-        ).toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-        })}
-        </p>
-        <img src=${dailyTemps.forecast.forecastday[2].day.condition.icon} class=temp-icon>
-        <p><strong>${dailyTemps.forecast.forecastday[2].day.avgtemp_c}&deg;</strong></p>
-      </div>
-      <div class="card-3">
-        <p>${new Date(
-          dailyTemps.forecast.forecastday[3].date,
-        ).toLocaleDateString("en-US", {
-          month: "long",
-          day: "numeric",
-        })}
-        </p> 
-       <img src=${dailyTemps.forecast.forecastday[3].day.condition.icon} class=temp-icon>
-       <p><strong>${dailyTemps.forecast.forecastday[3].day.avgtemp_c}&deg;</strong></p>
-      </div>
+      <div class="temp-second-col"></div>
     </div>
-    <div class=temp-second-col></div>
-  </div>
 
   `;
+}
 
+function applyTheme(location) {
   const body = document.body;
   const weatherCard = weatherSec.querySelector(".weather-card");
   const infoCard1 = infoSec.querySelector(".info-first-col");
   const infoCard2 = infoSec.querySelector(".info-second-col");
   const tempCard = dailyTemp.querySelector(".temp-first-col");
 
-  if (location.weather[0].icon.includes("d")) {
-    body.classList.add("day");
-    body.classList.remove("night");
-    weatherCard.classList.add("day");
-    weatherCard.classList.remove("night");
-  } else {
-    body.classList.add("night");
-    body.classList.remove("day");
-    weatherCard.classList.add("night");
-    weatherCard.classList.remove("day");
-    infoCard1.classList.add("night");
-    infoCard2.classList.add("night");
-    tempCard.classList.add("night");
-  }
+  const isDay = location.weather[0].icon.includes("d");
+
+  body.classList.toggle("day", isDay);
+  body.classList.toggle("night", !isDay);
+
+  weatherCard.classList.toggle("day", isDay);
+  weatherCard.classList.toggle("night", !isDay);
+
+  infoCard1.classList.toggle("night", !isDay);
+  infoCard2.classList.toggle("night", !isDay);
+  tempCard.classList.toggle("night", !isDay);
+}
+
+async function showWeather(location, dailyTemps, aiSuggestion) {
+  const icon = location.weather[0].icon;
+
+  weatherSec.innerHTML = weatherSecFunc(location, icon);
+  infoSec.innerHTML = infoSecFunc(location, aiSuggestion);
+  dailyTemp.innerHTML = dailyTempFunc(dailyTemps);
+
+  applyTheme(location);
+}
+
+function showLoading() {
+  weatherSec.innerHTML = `<p class="error">Loading Information</p>
+ `;
+  infoSec.innerHTML = ` <div class="loader-container">
+    <div class="loader"></div>  
+    </div>`;
+  dailyTemp.innerHTML = ``;
 
   const appLogo = document.querySelector(".app-logo");
   if (appLogo) appLogo.remove();
@@ -174,24 +170,6 @@ async function showWeather(location, dailyTemps, aiSuggestion) {
   const appDesc = document.querySelector(".app-desc");
   if (appDesc) appDesc.remove();
 }
-
-/*-----------------------------------------------------------------------
--------------------------GEMINI API--------------------------
------------------------------------------------------------------------ */
-// import { GoogleGenAI, ThinkingLevel } from "https://esm.run/@google/genai";
-
-// async function main(location) {
-//   const response = await ai.models.generateContent({
-//     model: "gemini-3-flash-preview",
-//     contents: prompt(location),
-//     config: {
-//       thinkingConfig: {
-//         thinkingLevel: ThinkingLevel.LOW,
-//       },
-//     },
-//   });
-//   return response.text;
-// }
 
 async function main(location) {
   const response = await fetch("/.netlify/functions/gemini", {
@@ -210,35 +188,58 @@ async function main(location) {
 button.addEventListener("click", async () => {
   let city = input.value.trim();
 
-  if (/^[a-zA-Z\s,]+$/.test(city)) {
-    try {
-      const coords = await getLocationCoordi(city); //get coordinates
-      console.log(coords);
-      const location = await getLocation(coords.lat, coords.lon); //get weather info
-      console.log(location);
-      const dailyTemps = await getTemps(coords.lat, coords.lon);
-      console.log(dailyTemps);
-      const aiSuggestion = await main(location); //ai clothing suggestion
-
-      await showWeather(location, dailyTemps, aiSuggestion);
-    } catch (error) {
-      weatherSec.innerHTML = `
-        <p class="error">Cannot find city. Please enter another city name</p>
-      `;
-      infoSec.innerHTML = ``;
-      dailyTemp.innerHTML = ``;
-    }
-  } else {
-    weatherSec.innerHTML = `
-      <p class="error">Please enter a valid city name</p>
-    `;
+  if (!city) {
+    weatherSec.innerHTML = `<p class="error">Please enter a city name</p>`;
     infoSec.innerHTML = ``;
     dailyTemp.innerHTML = ``;
+    return;
+  }
+
+  if (!/^[a-zA-Z\s,'-]+$/.test(city)) {
+    weatherSec.innerHTML = `<p class="error">Please enter a valid city name</p>`;
+    infoSec.innerHTML = ``;
+    dailyTemp.innerHTML = ``;
+    return;
+  }
+
+  showLoading();
+  button.disabled = true;
+
+  try {
+    const coords = await getLocationCoordi(city); //get coordinates
+    console.log(coords);
+    const location = await getLocation(coords.lat, coords.lon); //get weather info
+    console.log(location);
+    const dailyTemps = await getTemps(coords.lat, coords.lon);
+    console.log(dailyTemps);
+    const aiSuggestion = await main(location); //ai clothing suggestion
+
+    await showWeather(location, dailyTemps, aiSuggestion);
+  } catch (error) {
+    weatherSec.innerHTML = `
+        <p class="error">Cannot find city. Please enter another city name</p>
+      `;
+    infoSec.innerHTML = ``;
+    dailyTemp.innerHTML = ``;
+
     console.log(error);
+  } finally {
+    button.disabled = false;
   }
 });
 
 myLocation.addEventListener("click", async () => {
+  if (!location) {
+    weatherSec.innerHTML = `
+      <p class="error">Location not available. Please enable location services or use the search bar.</p>
+    `;
+    infoSec.innerHTML = ``;
+    dailyTemp.innerHTML = ``;
+  }
+
+  showLoading();
+  myLocation.disabled = true;
+
   try {
     const location = await getLocation(
       myPosition.coords.latitude,
@@ -252,10 +253,12 @@ myLocation.addEventListener("click", async () => {
     await showWeather(location, dailyTemps, aiSuggestion);
   } catch (error) {
     weatherSec.innerHTML = `
-      <p class="error">Browser does not support automatic location, please use search bar</p>
+      <p class="error">Failed to load weather for your location. Please try again.</p>
     `;
     infoSec.innerHTML = ``;
     dailyTemp.innerHTML = ``;
     console.log(error);
+  } finally {
+    myLocation.disabled = false;
   }
 });
